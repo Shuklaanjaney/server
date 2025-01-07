@@ -2,30 +2,42 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { body, validationResult } = require('express-validator');
+const mongoose = require('mongoose');
 require('dotenv').config();
 
+// Initialize Express app
 const app = express();
 const port = process.env.PORT || 5000;
 
 // Middleware to parse incoming JSON data
 app.use(express.json());
 
-// Sample in-memory "database" for demonstration
-let users = [];
+// MongoDB Connection Setup
+mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.log(err));
 
-// Secret key for JWT (should be stored in .env)
+// User Model
+const UserSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, unique: true, required: true },
+  password: { type: String, required: true }
+});
+
+const User = mongoose.model('User', UserSchema);
+
+// Secret key for JWT
 const SECRET_KEY = process.env.SECRET_KEY || 'your_secret_key';
 
 // Registration Route
 app.post(
   '/register',
   [
-    // Validate fields
     body('name').isLength({ min: 1 }).withMessage('Name is required'),
     body('email').isEmail().withMessage('Email is not valid'),
     body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long'),
   ],
-  (req, res) => {
+  async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
@@ -33,20 +45,24 @@ app.post(
 
     const { name, email, password } = req.body;
 
-    // Check if user already exists
-    const existingUser = users.find(user => user.email === email);
+    // Check if user already exists in the database
+    const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Hash password
+    // Hash the password
     const hashedPassword = bcrypt.hashSync(password, 8);
 
-    // Create a new user
-    const newUser = { name, email, password: hashedPassword };
-    users.push(newUser);
+    // Create a new user document in MongoDB
+    const newUser = new User({ name, email, password: hashedPassword });
 
-    res.status(201).json({ message: 'User registered successfully' });
+    try {
+      await newUser.save();
+      res.status(201).json({ message: 'User registered successfully' });
+    } catch (err) {
+      res.status(500).json({ message: 'Error registering user', error: err.message });
+    }
   }
 );
 
@@ -57,7 +73,7 @@ app.post(
     body('email').isEmail().withMessage('Email is not valid'),
     body('password').isLength({ min: 6 }).withMessage('Password is required'),
   ],
-  (req, res) => {
+  async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
@@ -66,19 +82,19 @@ app.post(
     const { email, password } = req.body;
 
     // Find user by email
-    const user = users.find(user => user.email === email);
+    const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Compare password with hashed password
+    // Compare the provided password with the hashed password
     const isMatch = bcrypt.compareSync(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Generate JWT token
-    const token = jwt.sign({ userId: user.email }, SECRET_KEY, { expiresIn: '1h' });
+    // Generate a JWT token
+    const token = jwt.sign({ userId: user._id }, SECRET_KEY, { expiresIn: '1h' });
 
     res.json({ message: 'Login successful', token });
   }
