@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+</head>
+<body>
+
+<h1>Welcome to the Dashboard</h1>
+<div id="user-info"></div>
+<button id="logout-btn">Logout</button>
+
+<script>
+    const apiUrl = 'http://localhost:5000';  // Update with your backend API URL
+
+    // Check if there's a valid JWT token in localStorage
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = 'index.html';  // Redirect to login page if not authenticated
+    }
+
+    // Fetch user info using the JWT token
+    async function fetchUserInfo() {
+        try {
+            const response = await fetch(`${apiUrl}/dashboard`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                document.getElementById('user-info').innerHTML = `
+                    <p>Welcome, ${data.user.userId}</p>
+                `;
+            } else {
+                window.location.href = 'index.html';  // Redirect to login if token is invalid
+            }
+        } catch (err) {
+            alert('Error fetching user data');
+        }
+    }
+
+    // Logout function
+    document.getElementById('logout-btn').addEventListener('click', () => {
+        localStorage.removeItem('token');
+        window.location.href = 'index.html';
+    });
+
+    // Fetch user info
+    fetchUserInfo();
+</script>
+
+</body>
+</html>
