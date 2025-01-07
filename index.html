@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registration and Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f4f4f9;
+        }
+        .container {
+            max-width: 400px;
+            margin: auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .error {
+            color: red;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Registration</h2>
+    <div id="register-errors" class="error"></div>
+    <div class="form-group">
+        <input type="text" id="register-name" placeholder="Name" />
+    </div>
+    <div class="form-group">
+        <input type="email" id="register-email" placeholder="Email" />
+    </div>
+    <div class="form-group">
+        <input type="password" id="register-password" placeholder="Password" />
+    </div>
+    <button id="register-btn">Register</button>
+
+    <hr>
+
+    <h2>Login</h2>
+    <div id="login-errors" class="error"></div>
+    <div class="form-group">
+        <input type="email" id="login-email" placeholder="Email" />
+    </div>
+    <div class="form-group">
+        <input type="password" id="login-password" placeholder="Password" />
+    </div>
+    <button id="login-btn">Login</button>
+</div>
+
+<script>
+    const apiUrl = 'http://localhost:5000';  // Update with your backend API URL
+
+    // Handle registration
+    document.getElementById('register-btn').addEventListener('click', async () => {
+        const name = document.getElementById('register-name').value;
+        const email = document.getElementById('register-email').value;
+        const password = document.getElementById('register-password').value;
+
+        const errorsDiv = document.getElementById('register-errors');
+        errorsDiv.innerHTML = '';
+
+        // Input validation
+        if (!name || !email || !password) {
+            errorsDiv.innerHTML = 'All fields are required!';
+            return;
+        }
+
+        try {
+            const response = await fetch(`${apiUrl}/register`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name, email, password }),
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                alert('Registration successful! You can now login.');
+            } else {
+                errorsDiv.innerHTML = data.message || 'Something went wrong!';
+            }
+        } catch (err) {
+            errorsDiv.innerHTML = 'Error occurred, please try again!';
+        }
+    });
+
+    // Handle login
+    document.getElementById('login-btn').addEventListener('click', async () => {
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+
+        const errorsDiv = document.getElementById('login-errors');
+        errorsDiv.innerHTML = '';
+
+        // Input validation
+        if (!email || !password) {
+            errorsDiv.innerHTML = 'Email and Password are required!';
+            return;
+        }
+
+        try {
+            const response = await fetch(`${apiUrl}/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password }),
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                localStorage.setItem('token', data.token);
+                alert('Login successful!');
+                window.location.href = 'dashboard.html';  // Redirect to dashboard page
+            } else {
+                errorsDiv.innerHTML = data.message || 'Invalid credentials';
+            }
+        } catch (err) {
+            errorsDiv.innerHTML = 'Error occurred, please try again!';
+        }
+    });
+</script>
+
+</body>
+</html>
